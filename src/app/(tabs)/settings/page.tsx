@@ -63,7 +63,7 @@ function Row({
       <Pressable
         onClick={onClick}
         pressScale={0.99}
-        className="flex w-full items-center gap-3 px-4 py-3.5 transition-colors duration-150 active:bg-press"
+        className="flex w-full items-center gap-3 px-4 py-3.5 transition-colors duration-150 hover:bg-press active:bg-press"
       >
         {inner}
       </Pressable>
@@ -106,16 +106,16 @@ export default function SettingsPage() {
   const handleImportFile = async (file: File) => {
     try {
       const parsed = JSON.parse(await file.text());
-      const { expenses, debts } = await importData(parsed);
+      const { expenses, entries } = await importData(parsed);
       haptic(10);
-      flash(`Restored ${expenses} expenses and ${debts} debts.`);
+      flash(`Restored ${expenses} expenses and ${entries} ledger entries.`);
     } catch (err) {
       flash(err instanceof Error ? err.message : "That file couldn't be read.");
     }
   };
 
   return (
-    <div className="pt-6">
+    <div className="pt-6 lg:max-w-2xl">
       <header className="px-1">
         <h1 className="text-[28px] font-bold tracking-tight text-ink">Settings</h1>
       </header>

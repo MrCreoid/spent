@@ -27,9 +27,17 @@ import { useData } from "@/lib/data-context";
 import { useSettings } from "@/lib/settings";
 import { haptic } from "@/lib/haptics";
 
-function Card({ title, children }: { title?: string; children: ReactNode }) {
+function Card({
+  title,
+  className = "",
+  children,
+}: {
+  title?: string;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <section className="rounded-card bg-card p-4">
+    <section className={`rounded-card bg-card p-4 lg:p-5 ${className}`}>
       {title && (
         <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-ink-2">
           {title}
@@ -152,10 +160,10 @@ export default function AnalyticsPage() {
         )}
       </div>
 
-      <div className="mt-5 flex flex-col gap-3">
+      <div className="mt-5 grid gap-3 lg:grid-cols-2">
         {mode === "month" ? (
           <>
-            <Card title="Daily trend">
+            <Card title="Daily trend" className="lg:col-span-2">
               <DailyTrendChart data={monthStats.dailySeries} currency={currency} />
             </Card>
             <Card title="Last 7 days">
@@ -195,13 +203,13 @@ export default function AnalyticsPage() {
                 }
               />
             </div>
-            <Card title="Categories">
+            <Card title="Categories" className="lg:col-span-2">
               <CategoryBreakdown data={monthStats.byCategory} currency={currency} />
             </Card>
           </>
         ) : (
           <>
-            <Card title="Monthly trend">
+            <Card title="Monthly trend" className="lg:col-span-2">
               <MonthlyBarChart
                 data={yearStats.series}
                 currency={currency}

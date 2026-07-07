@@ -4,16 +4,21 @@ import type { ReactNode } from "react";
 import { TabBar } from "@/components/nav/tab-bar";
 import { Fab } from "@/components/nav/fab";
 import { ExpenseSheet } from "@/features/expenses/expense-sheet";
-import { DebtSheet } from "@/features/debts/debt-sheet";
+import { EntrySheet } from "@/features/debts/entry-sheet";
+import { SettleSheet } from "@/features/debts/settle-sheet";
 import { useUI } from "@/lib/ui-store";
+import { useShortcuts } from "@/lib/use-shortcuts";
 
 export default function TabsLayout({ children }: { children: ReactNode }) {
   const { sheet, closeSheet } = useUI();
+  useShortcuts();
 
   return (
     <>
-      <main className="mx-auto min-h-dvh w-full max-w-lg px-4 pt-safe pb-[calc(96px+env(safe-area-inset-bottom))]">
-        {children}
+      <main className="min-h-dvh lg:ml-[224px]">
+        <div className="mx-auto w-full max-w-lg px-4 pt-safe pb-[calc(96px+env(safe-area-inset-bottom))] lg:max-w-5xl lg:px-10 lg:pb-16 lg:pt-4">
+          {children}
+        </div>
       </main>
       <Fab />
       <TabBar />
@@ -22,9 +27,15 @@ export default function TabsLayout({ children }: { children: ReactNode }) {
         initial={sheet?.kind === "expense" ? sheet.initial : undefined}
         onClose={closeSheet}
       />
-      <DebtSheet
-        open={sheet?.kind === "debt"}
-        initial={sheet?.kind === "debt" ? sheet.initial : undefined}
+      <EntrySheet
+        open={sheet?.kind === "entry"}
+        initial={sheet?.kind === "entry" ? sheet.initial : undefined}
+        person={sheet?.kind === "entry" ? sheet.person : undefined}
+        onClose={closeSheet}
+      />
+      <SettleSheet
+        open={sheet?.kind === "settle"}
+        personKey={sheet?.kind === "settle" ? sheet.personKey : ""}
         onClose={closeSheet}
       />
     </>

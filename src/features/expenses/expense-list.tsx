@@ -80,7 +80,7 @@ export function ExpenseList({ expenses }: { expenses: Expense[] }) {
                       },
                     ]}
                   >
-                    <div className="flex items-center gap-3.5 px-4 py-3">
+                    <div className="flex cursor-pointer items-center gap-3.5 px-4 py-3 transition-colors duration-150 hover:bg-card-2/60">
                       <CategoryBadge category={expense.category} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[15px] font-medium text-ink">

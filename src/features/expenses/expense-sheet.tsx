@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Sheet } from "@/components/ui/sheet";
 import { AmountPad } from "./amount-pad";
@@ -33,7 +33,6 @@ export function ExpenseSheet({ open, initial, onClose }: ExpenseSheetProps) {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form whenever the sheet opens
   useEffect(() => {
@@ -199,27 +198,25 @@ export function ExpenseSheet({ open, initial, onClose }: ExpenseSheetProps) {
             </Pressable>
           ))}
           <div className="relative">
-            <Pressable
-              onClick={() => dateInputRef.current?.showPicker?.()}
-              className={`rounded-full px-3 py-[7px] text-[13px] font-medium transition-colors duration-150 ${
+            <span
+              className={`block rounded-full px-3 py-[7px] text-[13px] font-medium transition-colors duration-150 ${
                 date !== today && date !== yesterday
                   ? "bg-accent-soft text-accent"
                   : "bg-card-2 text-ink-2"
               }`}
+              aria-hidden="true"
             >
               {date !== today && date !== yesterday
                 ? formatShortDate(date)
                 : "Other…"}
-            </Pressable>
+            </span>
+            {/* Invisible native input on top: opens the platform date picker */}
             <input
-              ref={dateInputRef}
               type="date"
               value={date}
               max={today}
               onChange={(e) => e.target.value && setDate(e.target.value)}
-              className="absolute inset-0 h-full w-full opacity-0"
-              style={{ pointerEvents: "none" }}
-              tabIndex={-1}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               aria-label="Pick a date"
             />
           </div>

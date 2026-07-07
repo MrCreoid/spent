@@ -8,7 +8,8 @@ A fast, minimal expense & debt tracker that feels like a native iOS app. Local-f
 
 - **Expenses** — amount keypad, 9 categories, automatic time, optional note, edit/delete with swipe gestures
 - **Analytics** — monthly & yearly totals, daily trend, monthly trend, last-7-days, category breakdown, largest expense, average per day
-- **Debts** — who owes you / who you owe, due dates with overdue highlighting, settle/reopen, search & filters
+- **Debts** — a personal ledger per person: every loan, borrow and settlement is an entry, and Spent keeps the running balance automatically. Full or partial settlements, filters, search by person/reason/amount/date
+- **Desktop** — sidebar navigation, multi-column layouts, keyboard shortcuts (1–4 tabs, N new expense, D new entry, / search)
 - **Local-first** — works fully offline as a guest (IndexedDB); sign in to sync everywhere
 - **PWA** — install to the iPhone Home Screen for a full-screen, native-feeling app
 - **Dark / Light / System** themes, multi-currency, JSON export/import backup
@@ -68,6 +69,6 @@ storage.rules     # Receipt images (future), user-scoped
 ## Data model
 
 - `users/{uid}/expenses/{id}` — amount, category, date, time, note
-- `users/{uid}/debts/{id}` — person, amount, type (lent/borrowed), reason, date, dueDate, status
+- `users/{uid}/debts/{id}` — ledger entries: person, personKey, amount, kind (`lent` / `borrowed` / `received` / `paid`), reason, note, date. Balances are derived, never stored. v1 rows (type/status) are migrated automatically on first load.
 
 Guest mode mirrors the same shapes in IndexedDB (`spent` database). Backups are plain JSON and portable between modes.

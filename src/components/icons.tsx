@@ -172,6 +172,25 @@ export const AlertIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const ArrowUpRightIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M7 17 17 7M9 7h8v8" />
+  </Icon>
+);
+
+export const ArrowDownLeftIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M17 7 7 17M15 17H7V9" />
+  </Icon>
+);
+
+export const HandshakeIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m11 17.5 2 1.8a1.7 1.7 0 0 0 2.3 0 1.6 1.6 0 0 0 0-2.3" />
+    <path d="m13.2 14.9 2.2 2.1a1.7 1.7 0 0 0 2.3 0 1.6 1.6 0 0 0 0-2.3L13.9 11a2.2 2.2 0 0 0-3 0l-1.1 1a1.6 1.6 0 0 1-2.3 0 1.6 1.6 0 0 1 0-2.3l3.4-3.3a4.2 4.2 0 0 1 5.4-.3l2.3 1.7M2.5 8.5l4-4M17.5 4.5l4 4" />
+  </Icon>
+);
+
 export const GoogleIcon = ({ size = 20 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
     <path

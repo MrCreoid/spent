@@ -1,11 +1,12 @@
 "use client";
 
 import { create } from "zustand";
-import type { Debt, Expense } from "./types";
+import type { Expense, LedgerEntry } from "./types";
 
 export type ActiveSheet =
   | { kind: "expense"; initial?: Expense }
-  | { kind: "debt"; initial?: Debt }
+  | { kind: "entry"; initial?: LedgerEntry; person?: string }
+  | { kind: "settle"; personKey: string }
   | null;
 
 interface UIStore {
