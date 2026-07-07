@@ -114,7 +114,7 @@ export function Fab() {
               haptic();
               setExpanded((v) => !v);
             }}
-            className="flex h-[56px] w-[56px] cursor-pointer items-center justify-center rounded-full bg-accent text-white shadow-[0_6px_24px_rgba(0,0,0,0.35)]"
+            className="accent-gradient flex h-[56px] w-[56px] cursor-pointer items-center justify-center rounded-full text-white shadow-[0_6px_24px_rgba(0,0,0,0.35)]"
           >
             <PlusIcon size={26} strokeWidth={2.2} />
           </motion.button>

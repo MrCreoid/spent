@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Sheet } from "@/components/ui/sheet";
 import { Pressable } from "@/components/ui/pressable";
+import { Segmented } from "@/components/ui/segmented";
 import { PersonAvatar } from "./avatar";
 import { formatMoney, currencySymbol } from "@/lib/currency";
 import { todayISO } from "@/lib/dates";
 import { haptic } from "@/lib/haptics";
 import { useData } from "@/lib/data-context";
 import { useSettings } from "@/lib/settings";
+import type { EntryKind } from "@/lib/types";
 
 interface QuickAdjustSheetProps {
   open: boolean;
@@ -19,9 +21,11 @@ interface QuickAdjustSheetProps {
 
 const CHIP_AMOUNTS = [10, 20, 50, 100, 200, 500];
 
+type Direction = "repay" | "increase";
+
 /**
  * The fastest action in the debt section: one tap records a small
- * repayment against the balance. No reason, no form.
+ * repayment — or a little more borrowed — no reason, no form.
  */
 export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetProps) {
   const { people, addEntry } = useData();
@@ -32,6 +36,7 @@ export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetP
     [people, personKey]
   );
 
+  const [direction, setDirection] = useState<Direction>("repay");
   const [customOpen, setCustomOpen] = useState(false);
   const [customStr, setCustomStr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -39,6 +44,7 @@ export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetP
 
   useEffect(() => {
     if (open) {
+      setDirection("repay");
       setCustomOpen(false);
       setCustomStr("");
       setBusy(false);
@@ -51,10 +57,25 @@ export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetP
   const balance = person.balance;
   const owesMe = balance > 0;
   const full = Math.abs(balance);
+  const repaying = direction === "repay";
+
+  // Effect on |balance|: repay shrinks it, increase grows it
+  const kind: EntryKind = owesMe
+    ? repaying
+      ? "received"
+      : "lent"
+    : repaying
+      ? "paid"
+      : "borrowed";
 
   const record = async (amount: number) => {
     if (busy) return;
-    if (!(amount > 0) || amount > full + 0.001) {
+    if (!(amount > 0)) {
+      setError("Enter an amount.");
+      haptic([20, 40, 20]);
+      return;
+    }
+    if (repaying && amount > full + 0.001) {
       setError(`Keep it within the ${formatMoney(full, currency)} outstanding.`);
       haptic([20, 40, 20]);
       return;
@@ -64,7 +85,7 @@ export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetP
       await addEntry({
         person: person.name,
         amount: Math.round(amount * 100) / 100,
-        kind: owesMe ? "received" : "paid",
+        kind,
         date: todayISO(),
       });
       haptic(10);
@@ -75,7 +96,18 @@ export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetP
     }
   };
 
-  const chips = CHIP_AMOUNTS.filter((a) => a <= full);
+  const chips = repaying
+    ? CHIP_AMOUNTS.filter((a) => a <= full)
+    : CHIP_AMOUNTS;
+  const sign = repaying ? "−" : "+";
+
+  const helper = repaying
+    ? owesMe
+      ? "They gave you some money back"
+      : "You paid some of it back"
+    : owesMe
+      ? "They borrowed a little more"
+      : "You borrowed a little more";
 
   return (
     <Sheet open={open} onClose={onClose} ariaLabel={`Quick adjust for ${person.name}`}>
@@ -85,15 +117,30 @@ export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetP
           <div>
             <h2 className="text-[16px] font-semibold text-ink">Quick adjust</h2>
             <p className="text-[13px] text-ink-2">
-              {owesMe ? "They gave you some money back" : "You paid some back"}
-              {" · "}
-              <span className="tnum font-medium">
-                {formatMoney(full, currency)}
-              </span>{" "}
-              outstanding
+              <span className="tnum font-medium">{formatMoney(full, currency)}</span>{" "}
+              outstanding · {helper.toLowerCase()}
             </p>
           </div>
         </div>
+
+        <Segmented
+          ariaLabel="Adjustment direction"
+          options={[
+            {
+              value: "repay",
+              label: owesMe ? "− They paid back" : "− You paid back",
+            },
+            {
+              value: "increase",
+              label: owesMe ? "+ Borrowed more" : "+ You borrowed",
+            },
+          ]}
+          value={direction}
+          onChange={(v) => {
+            setDirection(v);
+            setError(null);
+          }}
+        />
 
         {error && (
           <p
@@ -107,7 +154,7 @@ export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetP
         <div className="grid grid-cols-3 gap-2">
           {chips.map((amount, i) => (
             <motion.div
-              key={amount}
+              key={`${direction}-${amount}`}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03, type: "spring", stiffness: 400, damping: 30 }}
@@ -118,32 +165,35 @@ export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetP
                 pressScale={0.93}
                 className="tnum h-[52px] w-full rounded-2xl bg-card-2 text-[17px] font-semibold text-ink transition-colors duration-150 hover:bg-press disabled:opacity-40"
               >
-                {owesMe ? "+" : "−"}
+                {sign}
                 {formatMoney(amount, currency)}
               </Pressable>
             </motion.div>
           ))}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: chips.length * 0.03, type: "spring", stiffness: 400, damping: 30 }}
-          >
-            <Pressable
-              onClick={() => void record(full)}
-              disabled={busy}
-              pressScale={0.93}
-              className="tnum h-[52px] w-full rounded-2xl bg-positive-soft text-[15px] font-semibold text-positive transition-colors duration-150 disabled:opacity-40"
+          {repaying && (
+            <motion.div
+              key="full"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: chips.length * 0.03, type: "spring", stiffness: 400, damping: 30 }}
             >
-              Full {formatMoney(full, currency)}
-            </Pressable>
-          </motion.div>
+              <Pressable
+                onClick={() => void record(full)}
+                disabled={busy}
+                pressScale={0.93}
+                className="tnum h-[52px] w-full rounded-2xl bg-positive-soft text-[15px] font-semibold text-positive transition-colors duration-150 disabled:opacity-40"
+              >
+                Clear {formatMoney(full, currency)}
+              </Pressable>
+            </motion.div>
+          )}
         </div>
 
         {customOpen ? (
           <div className="flex gap-2">
             <div className="relative flex-1">
               <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[16px] text-ink-3">
-                {currencySymbol(currency)}
+                {sign} {currencySymbol(currency)}
               </span>
               <input
                 type="number"
@@ -160,7 +210,7 @@ export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetP
                   if (e.key === "Enter") void record(parseFloat(customStr));
                 }}
                 placeholder="0"
-                className="tnum w-full rounded-2xl bg-card-2 px-4 py-3 pl-9 text-[16px] text-ink placeholder:text-ink-3"
+                className="tnum w-full rounded-2xl bg-card-2 px-4 py-3 pl-12 text-[16px] text-ink placeholder:text-ink-3"
                 aria-label="Custom amount"
               />
             </div>
@@ -182,8 +232,8 @@ export function QuickAdjustSheet({ open, personKey, onClose }: QuickAdjustSheetP
         )}
 
         <p className="text-center text-[12px] text-ink-3">
-          Recorded instantly as a {owesMe ? "payment received" : "payment made"}.
-          Use “Add entry” for anything with details.
+          Recorded instantly with today's date. Use “Add entry” for anything
+          with details.
         </p>
       </div>
     </Sheet>

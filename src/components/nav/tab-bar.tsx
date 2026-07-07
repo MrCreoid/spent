@@ -65,7 +65,7 @@ export function TabBar() {
         className="fixed inset-y-0 left-0 z-30 hidden w-[224px] flex-col border-r border-line bg-card/40 px-3 py-6 backdrop-blur-xl lg:flex"
       >
         <div className="flex items-center gap-2.5 px-3 pb-7">
-          <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-ink text-bg">
+          <span className="accent-gradient flex h-8 w-8 items-center justify-center rounded-[10px] text-white">
             <ChartIcon size={16} strokeWidth={2.2} />
           </span>
           <span className="text-[16px] font-bold tracking-tight text-ink">

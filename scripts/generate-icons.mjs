@@ -31,12 +31,18 @@ function markSVG(size, { radius = 0.22, padded = false } = {}) {
       const x = x0 + i * (barW + gap);
       const y = baseline - h;
       return `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="${barW / 2}" fill="${
-        i === 2 ? "#3395ff" : "#3c4148"
+        i === 2 ? "url(#accent)" : "#3c4148"
       }"/>`;
     })
     .join("");
   return Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}">
+      <defs>
+        <linearGradient id="accent" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stop-color="#7c7fff"/>
+          <stop offset="100%" stop-color="#46c4ff"/>
+        </linearGradient>
+      </defs>
       <rect width="${s}" height="${s}" rx="${r}" fill="#101114"/>
       ${bars}
     </svg>`
