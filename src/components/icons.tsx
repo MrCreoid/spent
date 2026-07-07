@@ -184,6 +184,19 @@ export const ArrowDownLeftIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const UserPlusIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx={10} cy={8} r={3.5} />
+    <path d="M4 20a6 6 0 0 1 12 0M18 8v6M15 11h6" />
+  </Icon>
+);
+
+export const BoltIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M13 2.5 4.5 13.5H11l-1 8L18.5 10.5H12l1-8Z" />
+  </Icon>
+);
+
 export const HandshakeIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="m11 17.5 2 1.8a1.7 1.7 0 0 0 2.3 0 1.6 1.6 0 0 0 0-2.3" />

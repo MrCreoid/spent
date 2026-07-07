@@ -9,7 +9,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { currencySymbol } from "@/lib/currency";
 import { todayISO } from "@/lib/dates";
 import { haptic } from "@/lib/haptics";
-import { buildPeople, isSettlement } from "@/lib/ledger";
+import { isSettlement } from "@/lib/ledger";
 import { entrySchema, type EntryFormValues } from "@/lib/schemas";
 import { useData } from "@/lib/data-context";
 import { useSettings } from "@/lib/settings";
@@ -52,14 +52,11 @@ function Field({
 }
 
 export function EntrySheet({ open, initial, person, onClose }: EntrySheetProps) {
-  const { entries, addEntry, updateEntry } = useData();
+  const { people, addEntry, updateEntry } = useData();
   const currency = useSettings((s) => s.currency);
 
   // Existing people for the name autocomplete
-  const peopleNames = useMemo(
-    () => buildPeople(entries).map((p) => p.name),
-    [entries]
-  );
+  const peopleNames = useMemo(() => people.map((p) => p.name), [people]);
 
   const editingSettlement = initial ? isSettlement(initial.kind) : false;
 

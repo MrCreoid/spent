@@ -6,6 +6,8 @@ import { Fab } from "@/components/nav/fab";
 import { ExpenseSheet } from "@/features/expenses/expense-sheet";
 import { EntrySheet } from "@/features/debts/entry-sheet";
 import { SettleSheet } from "@/features/debts/settle-sheet";
+import { QuickAdjustSheet } from "@/features/debts/quick-adjust-sheet";
+import { PersonSheet } from "@/features/debts/person-sheet";
 import { useUI } from "@/lib/ui-store";
 import { useShortcuts } from "@/lib/use-shortcuts";
 
@@ -38,6 +40,12 @@ export default function TabsLayout({ children }: { children: ReactNode }) {
         personKey={sheet?.kind === "settle" ? sheet.personKey : ""}
         onClose={closeSheet}
       />
+      <QuickAdjustSheet
+        open={sheet?.kind === "quickAdjust"}
+        personKey={sheet?.kind === "quickAdjust" ? sheet.personKey : ""}
+        onClose={closeSheet}
+      />
+      <PersonSheet open={sheet?.kind === "person"} onClose={closeSheet} />
     </>
   );
 }

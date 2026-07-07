@@ -10,11 +10,13 @@ import { AnimatedMoney } from "@/components/ui/animated-number";
 import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
+  BoltIcon,
   ChevronRightIcon,
   DebtsIcon,
   HandshakeIcon,
   PlusIcon,
   SearchIcon,
+  UserPlusIcon,
   XIcon,
 } from "@/components/icons";
 import { PersonAvatar } from "@/features/debts/avatar";
@@ -22,7 +24,6 @@ import { LedgerView } from "@/features/debts/ledger-view";
 import { formatMoney } from "@/lib/currency";
 import { formatShortDate } from "@/lib/dates";
 import {
-  buildPeople,
   filterPeople,
   isSettlement,
   ledgerDashboard,
@@ -36,7 +37,7 @@ import { useSettings } from "@/lib/settings";
 import { useUI } from "@/lib/ui-store";
 
 export default function DebtsPage() {
-  const { entries, ready } = useData();
+  const { entries, people, ready } = useData();
   const currency = useSettings((s) => s.currency);
   const openSheet = useUI((s) => s.openSheet);
   const reduceMotion = useReducedMotion();
@@ -48,7 +49,6 @@ export default function DebtsPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const people = useMemo(() => buildPeople(entries), [entries]);
   const dashboard = useMemo(() => ledgerDashboard(people), [people]);
   const selected = selectedKey
     ? (people.find((p) => p.key === selectedKey) ?? null)
@@ -64,6 +64,10 @@ export default function DebtsPage() {
   const recent = useMemo(
     () => [...entries].sort((a, b) => b.createdAt - a.createdAt).slice(0, 4),
     [entries]
+  );
+  const colorByKey = useMemo(
+    () => new Map(people.map((p) => [p.key, p.color])),
+    [people]
   );
 
   // "/" shortcut → open + focus search
@@ -109,23 +113,32 @@ export default function DebtsPage() {
                 <h1 className="text-[28px] font-bold tracking-tight text-ink">
                   Debts
                 </h1>
-                <Pressable
-                  aria-label={searchOpen ? "Close search" : "Search people"}
-                  onClick={() => {
-                    setSearchOpen((v) => !v);
-                    setQuery("");
-                    if (!searchOpen)
-                      requestAnimationFrame(() => searchRef.current?.focus());
-                  }}
-                  className="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-card-2 text-ink-2"
-                >
-                  {searchOpen ? <XIcon size={17} /> : <SearchIcon size={17} />}
-                </Pressable>
+                <div className="mt-1 flex items-center gap-2">
+                  <Pressable
+                    aria-label={searchOpen ? "Close search" : "Search people"}
+                    onClick={() => {
+                      setSearchOpen((v) => !v);
+                      setQuery("");
+                      if (!searchOpen)
+                        requestAnimationFrame(() => searchRef.current?.focus());
+                    }}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-card-2 text-ink-2"
+                  >
+                    {searchOpen ? <XIcon size={17} /> : <SearchIcon size={17} />}
+                  </Pressable>
+                  <Pressable
+                    onClick={() => openSheet({ kind: "person" })}
+                    className="flex h-9 items-center gap-1.5 rounded-full bg-accent-soft px-3.5 text-[13px] font-semibold text-accent"
+                  >
+                    <UserPlusIcon size={15} />
+                    New person
+                  </Pressable>
+                </div>
               </div>
 
               {/* Dashboard */}
               <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
-                <div className="rounded-card bg-card px-4 py-3.5 transition-colors duration-200 hover:bg-card-2/60">
+                <div className="card-surface px-4 py-3.5 transition-colors duration-200 hover:bg-card-2/60">
                   <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-ink-3">
                     <ArrowUpRightIcon size={13} className="text-positive" />
                     Owed to you
@@ -140,7 +153,7 @@ export default function DebtsPage() {
                     {dashboard.owedToMe.people === 1 ? "person" : "people"}
                   </p>
                 </div>
-                <div className="rounded-card bg-card px-4 py-3.5 transition-colors duration-200 hover:bg-card-2/60">
+                <div className="card-surface px-4 py-3.5 transition-colors duration-200 hover:bg-card-2/60">
                   <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-ink-3">
                     <ArrowDownLeftIcon size={13} className="text-negative" />
                     You owe
@@ -155,7 +168,7 @@ export default function DebtsPage() {
                     {dashboard.iOwe.people === 1 ? "person" : "people"}
                   </p>
                 </div>
-                <div className="col-span-2 rounded-card bg-card px-4 py-3.5 transition-colors duration-200 hover:bg-card-2/60 lg:col-span-1">
+                <div className="col-span-2 card-surface px-4 py-3.5 transition-colors duration-200 hover:bg-card-2/60 lg:col-span-1">
                   <p className="text-[12px] font-semibold uppercase tracking-wide text-ink-3">
                     Net outstanding
                   </p>
@@ -245,13 +258,22 @@ export default function DebtsPage() {
                   }
                   action={
                     !query && people.length === 0 ? (
-                      <Pressable
-                        onClick={() => openSheet({ kind: "entry" })}
-                        className="flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-[15px] font-semibold text-white"
-                      >
-                        <PlusIcon size={18} strokeWidth={2.2} />
-                        Add first entry
-                      </Pressable>
+                      <div className="flex gap-2.5">
+                        <Pressable
+                          onClick={() => openSheet({ kind: "person" })}
+                          className="flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-[15px] font-semibold text-white"
+                        >
+                          <UserPlusIcon size={17} />
+                          Add person
+                        </Pressable>
+                        <Pressable
+                          onClick={() => openSheet({ kind: "entry" })}
+                          className="flex items-center gap-2 rounded-full bg-card-2 px-5 py-3 text-[15px] font-semibold text-ink"
+                        >
+                          <PlusIcon size={17} strokeWidth={2.2} />
+                          Add entry
+                        </Pressable>
+                      </div>
                     ) : undefined
                   }
                 />
@@ -270,45 +292,75 @@ export default function DebtsPage() {
                           exit={{ opacity: 0, scale: 0.96 }}
                           transition={{ type: "spring", stiffness: 400, damping: 34 }}
                         >
-                          <Pressable
-                            onClick={() => setSelectedKey(person.key)}
-                            pressScale={0.98}
-                            className="group flex w-full items-center gap-3.5 rounded-card bg-card px-4 py-4 text-left transition-colors duration-200 hover:bg-card-2/60"
-                          >
-                            <PersonAvatar name={person.name} size={44} />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-[15px] font-semibold text-ink">
-                                {person.name}
-                              </p>
-                              <p className="mt-0.5 text-[12.5px] text-ink-3">
-                                {settled
-                                  ? "Settled"
-                                  : owesMe
-                                    ? "Owes you"
-                                    : "You owe"}
-                                {" · "}
-                                {person.entryCount}{" "}
-                                {person.entryCount === 1 ? "entry" : "entries"}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className={`tnum text-[16px] font-bold tracking-tight ${
-                                  settled
-                                    ? "text-ink-3"
-                                    : owesMe
-                                      ? "text-positive"
-                                      : "text-negative"
-                                }`}
+                          <div className="group relative">
+                            <Pressable
+                              onClick={() => setSelectedKey(person.key)}
+                              pressScale={0.98}
+                              className="flex w-full items-center gap-3.5 card-surface px-4 py-4 text-left transition-colors duration-200 hover:bg-card-2/60"
+                            >
+                              <PersonAvatar
+                                name={person.name}
+                                size={44}
+                                color={person.color}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[15px] font-semibold text-ink">
+                                  {person.name}
+                                </p>
+                                <p className="mt-0.5 text-[12.5px] text-ink-3">
+                                  {person.entryCount === 0
+                                    ? "No entries yet"
+                                    : settled
+                                      ? "Settled"
+                                      : owesMe
+                                        ? "Owes you"
+                                        : "You owe"}
+                                  {person.entryCount > 0 && (
+                                    <>
+                                      {" · "}
+                                      {person.entryCount}{" "}
+                                      {person.entryCount === 1
+                                        ? "entry"
+                                        : "entries"}
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1.5 pr-8">
+                                <span
+                                  className={`tnum text-[16px] font-bold tracking-tight ${
+                                    settled
+                                      ? "text-ink-3"
+                                      : owesMe
+                                        ? "text-positive"
+                                        : "text-negative"
+                                  }`}
+                                >
+                                  {formatMoney(Math.abs(person.balance), currency)}
+                                </span>
+                              </div>
+                            </Pressable>
+                            {/* Quick adjust — the fastest debt action */}
+                            {!settled ? (
+                              <Pressable
+                                aria-label={`Quick adjust for ${person.name}`}
+                                onClick={() =>
+                                  openSheet({
+                                    kind: "quickAdjust",
+                                    personKey: person.key,
+                                  })
+                                }
+                                className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-accent-soft text-accent transition-transform duration-150 hover:scale-110"
                               >
-                                {formatMoney(Math.abs(person.balance), currency)}
-                              </span>
+                                <BoltIcon size={15} />
+                              </Pressable>
+                            ) : (
                               <ChevronRightIcon
                                 size={15}
-                                className="text-ink-3 transition-transform duration-200 group-hover:translate-x-0.5"
+                                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-ink-3 transition-transform duration-200 group-hover:translate-x-0.5"
                               />
-                            </div>
-                          </Pressable>
+                            )}
+                          </div>
                         </motion.li>
                       );
                     })}
@@ -323,7 +375,7 @@ export default function DebtsPage() {
                 <h2 className="px-1 pb-2 text-[13px] font-semibold uppercase tracking-wide text-ink-2">
                   Recent activity
                 </h2>
-                <div className="overflow-hidden rounded-card bg-card">
+                <div className="overflow-hidden card-surface">
                   {recent.map((entry, i) => {
                     const settlement = isSettlement(entry.kind);
                     const positive = entry.kind === "lent";
@@ -334,7 +386,11 @@ export default function DebtsPage() {
                           onClick={() => setSelectedKey(entry.personKey)}
                           className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors duration-150 hover:bg-card-2/60"
                         >
-                          <PersonAvatar name={entry.person} size={30} />
+                          <PersonAvatar
+                            name={entry.person}
+                            size={30}
+                            color={colorByKey.get(entry.personKey)}
+                          />
                           <p className="min-w-0 flex-1 truncate text-[13.5px] text-ink-2">
                             <span className="font-medium text-ink">
                               {entry.person}

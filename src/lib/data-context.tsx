@@ -9,7 +9,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Expense, LedgerEntry, LedgerRecord } from "./types";
+import type {
+  Expense,
+  LedgerEntry,
+  LedgerRecord,
+  PersonRecord,
+} from "./types";
 import type { DataRepo } from "./repo/types";
 import { LocalRepo } from "./repo/local";
 import { CloudRepo } from "./repo/cloud";
@@ -17,15 +22,19 @@ import { getDb } from "./firebase";
 import { useAuth } from "./auth-context";
 import { newId } from "./id";
 import {
+  buildPeople,
   isImportableLedgerRow,
   personKeyOf,
   upgradeRecords,
+  type PersonSummary,
 } from "./ledger";
 
 interface DataContextValue {
   expenses: Expense[];
   /** All ledger entries, normalized to the current schema */
   entries: LedgerEntry[];
+  /** Aggregated per-person ledgers (declared people + entry-derived) */
+  people: PersonSummary[];
   /** False until the first snapshot has arrived (drives skeletons) */
   ready: boolean;
   /** True when data is syncing to the cloud (signed in) */
@@ -40,7 +49,10 @@ interface DataContextValue {
   ) => Promise<void>;
   updateEntry: (entry: LedgerEntry) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
-  /** Remove a person's entire ledger */
+
+  /** Create (or recolor) a person without any transaction */
+  addPerson: (name: string, color?: number) => Promise<void>;
+  /** Remove a person's entire ledger and their record */
   deletePerson: (personKey: string) => Promise<void>;
 
   exportData: () => {
@@ -49,6 +61,7 @@ interface DataContextValue {
     exportedAt: string;
     expenses: Expense[];
     debts: LedgerEntry[];
+    people: PersonRecord[];
   };
   importData: (json: unknown) => Promise<{ expenses: number; entries: number }>;
   resetAll: () => Promise<void>;
@@ -56,10 +69,17 @@ interface DataContextValue {
 
 const DataContext = createContext<DataContextValue | null>(null);
 
+function isImportablePerson(row: unknown): row is PersonRecord {
+  if (!row || typeof row !== "object") return false;
+  const r = row as Record<string, unknown>;
+  return typeof r.id === "string" && typeof r.name === "string";
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
+  const [personRecords, setPersonRecords] = useState<PersonRecord[]>([]);
   const [ready, setReady] = useState(false);
   const migratedFor = useRef<string | null>(null);
   const rewroteLedger = useRef(false);
@@ -79,10 +99,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const flag = `spent-migrated-${user.uid}`;
     if (localStorage.getItem(flag) || migratedFor.current === user.uid) return;
     migratedFor.current = user.uid;
-    void new LocalRepo().snapshot().then(async ({ expenses, ledger }) => {
+    void new LocalRepo().snapshot().then(async ({ expenses, ledger, people }) => {
       const { entries } = upgradeRecords(ledger);
-      if (expenses.length || entries.length) {
-        await repo.bulkPut(expenses, entries);
+      if (expenses.length || entries.length || people.length) {
+        await repo.bulkPut(expenses, entries, people);
       }
       localStorage.setItem(flag, "1");
     });
@@ -92,20 +112,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!repo) return;
     setReady(false);
     rewroteLedger.current = false;
-    let gotExpenses = false;
-    let gotLedger = false;
+    const got = { expenses: false, ledger: false, people: false };
     const markReady = () => {
-      if (gotExpenses && gotLedger) setReady(true);
+      if (got.expenses && got.ledger && got.people) setReady(true);
     };
     const unsubE = repo.subscribeExpenses((rows) => {
       setExpenses(rows);
-      gotExpenses = true;
+      got.expenses = true;
       markReady();
     });
     const unsubL = repo.subscribeLedger((rows: LedgerRecord[]) => {
       const { entries: upgraded, needsRewrite } = upgradeRecords(rows);
       setEntries(upgraded);
-      gotLedger = true;
+      got.ledger = true;
       markReady();
       // Persist the v1 → v2 schema upgrade exactly once per store
       if (needsRewrite && !rewroteLedger.current) {
@@ -113,9 +132,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
         void repo.bulkPut([], upgraded);
       }
     });
+    const unsubP = repo.subscribePeople((rows) => {
+      setPersonRecords(rows);
+      got.people = true;
+      markReady();
+    });
     return () => {
       unsubE();
       unsubL();
+      unsubP();
     };
   }, [repo]);
 
@@ -126,6 +151,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         : b.date.localeCompare(a.date)
     );
     const sortedEntries = [...entries].sort((a, b) => b.createdAt - a.createdAt);
+    const people = buildPeople(entries, personRecords);
 
     const requireRepo = (): DataRepo => {
       if (!repo) throw new Error("Storage not ready yet");
@@ -135,6 +161,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return {
       expenses: sortedExpenses,
       entries: sortedEntries,
+      people,
       ready,
       synced: Boolean(user),
 
@@ -172,19 +199,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
         });
       },
       deleteEntry: (id) => requireRepo().deleteEntry(id),
+
+      addPerson: async (name, color) => {
+        const trimmed = name.trim();
+        const id = personKeyOf(trimmed);
+        const existing = personRecords.find((p) => p.id === id);
+        const now = Date.now();
+        await requireRepo().putPerson({
+          id,
+          name: trimmed,
+          color,
+          createdAt: existing?.createdAt ?? now,
+          updatedAt: now,
+        });
+      },
+
       deletePerson: async (personKey) => {
         const ids = entries
           .filter((e) => e.personKey === personKey)
           .map((e) => e.id);
         if (ids.length) await requireRepo().deleteEntries(ids);
+        await requireRepo().deletePersonRecord(personKey);
       },
 
       exportData: () => ({
         app: "spent",
-        version: 2,
+        version: 3,
         exportedAt: new Date().toISOString(),
         expenses: sortedExpenses,
         debts: sortedEntries,
+        people: personRecords,
       }),
 
       importData: async (json) => {
@@ -192,6 +236,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           expenses?: unknown[];
           debts?: unknown[];
           entries?: unknown[];
+          people?: unknown[];
         };
         const validExpenses = (
           Array.isArray(parsed?.expenses) ? parsed.expenses : []
@@ -207,16 +252,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ...(Array.isArray(parsed?.entries) ? parsed.entries : []),
         ].filter(isImportableLedgerRow);
         const { entries: validEntries } = upgradeRecords(rawLedger);
-        if (!validExpenses.length && !validEntries.length) {
+        const validPeople = (
+          Array.isArray(parsed?.people) ? parsed.people : []
+        ).filter(isImportablePerson);
+        if (!validExpenses.length && !validEntries.length && !validPeople.length) {
           throw new Error("This file doesn't contain any Spent data.");
         }
-        await requireRepo().bulkPut(validExpenses, validEntries);
+        await requireRepo().bulkPut(validExpenses, validEntries, validPeople);
         return { expenses: validExpenses.length, entries: validEntries.length };
       },
 
       resetAll: () => requireRepo().clearAll(),
     };
-  }, [expenses, entries, ready, repo, user]);
+  }, [expenses, entries, personRecords, ready, repo, user]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

@@ -12,7 +12,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 
 export function ListSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="overflow-hidden rounded-card bg-card" aria-hidden="true">
+    <div className="overflow-hidden card-surface" aria-hidden="true">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-3.5 px-4 py-3">
           <Skeleton className="h-10 w-10 rounded-[12px]" />

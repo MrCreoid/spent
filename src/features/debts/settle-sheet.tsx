@@ -7,7 +7,6 @@ import { PersonAvatar } from "./avatar";
 import { formatMoney, currencySymbol } from "@/lib/currency";
 import { todayISO } from "@/lib/dates";
 import { haptic } from "@/lib/haptics";
-import { buildPeople } from "@/lib/ledger";
 import { useData } from "@/lib/data-context";
 import { useSettings } from "@/lib/settings";
 
@@ -22,12 +21,12 @@ interface SettleSheetProps {
  * balance: they pay you (received) or you pay them (paid).
  */
 export function SettleSheet({ open, personKey, onClose }: SettleSheetProps) {
-  const { entries, addEntry } = useData();
+  const { people, addEntry } = useData();
   const currency = useSettings((s) => s.currency);
 
   const person = useMemo(
-    () => buildPeople(entries).find((p) => p.key === personKey) ?? null,
-    [entries, personKey]
+    () => people.find((p) => p.key === personKey) ?? null,
+    [people, personKey]
   );
 
   const balance = person?.balance ?? 0;
@@ -85,7 +84,7 @@ export function SettleSheet({ open, personKey, onClose }: SettleSheetProps) {
     <Sheet open={open} onClose={onClose} ariaLabel={`Settle up with ${person.name}`}>
       <div className="flex flex-col gap-4 pb-4 pt-1">
         <div className="flex items-center gap-3">
-          <PersonAvatar name={person.name} size={40} />
+          <PersonAvatar name={person.name} size={40} color={person.color} />
           <div>
             <h2 className="text-[16px] font-semibold text-ink">Settle up</h2>
             <p className="text-[13px] text-ink-2">

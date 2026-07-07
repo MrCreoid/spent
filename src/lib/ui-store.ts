@@ -7,6 +7,8 @@ export type ActiveSheet =
   | { kind: "expense"; initial?: Expense }
   | { kind: "entry"; initial?: LedgerEntry; person?: string }
   | { kind: "settle"; personKey: string }
+  | { kind: "quickAdjust"; personKey: string }
+  | { kind: "person" }
   | null;
 
 interface UIStore {

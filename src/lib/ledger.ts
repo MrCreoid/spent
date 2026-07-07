@@ -1,4 +1,10 @@
-import type { EntryKind, LedgerEntry, LedgerRecord, LegacyDebt } from "./types";
+import type {
+  EntryKind,
+  LedgerEntry,
+  LedgerRecord,
+  LegacyDebt,
+  PersonRecord,
+} from "./types";
 import { ENTRY_KINDS } from "./types";
 import { formatShortDate } from "./dates";
 
@@ -95,6 +101,8 @@ export function isImportableLedgerRow(row: unknown): row is LedgerRecord {
 export interface PersonSummary {
   key: string;
   name: string;
+  /** Chosen avatar palette index, if the person was created explicitly */
+  color?: number;
   /** Positive: they owe me. Negative: I owe them. Zero: settled. */
   balance: number;
   entryCount: number;
@@ -111,8 +119,27 @@ function chronological(a: LedgerEntry, b: LedgerEntry): number {
     : a.date.localeCompare(b.date);
 }
 
-export function buildPeople(entries: LedgerEntry[]): PersonSummary[] {
+/**
+ * Merges declared person records with entry-derived ledgers, so a
+ * freshly created person shows up before their first transaction.
+ */
+export function buildPeople(
+  entries: LedgerEntry[],
+  records: PersonRecord[] = []
+): PersonSummary[] {
   const map = new Map<string, PersonSummary>();
+  for (const record of records) {
+    map.set(record.id, {
+      key: record.id,
+      name: record.name,
+      color: record.color,
+      balance: 0,
+      entryCount: 0,
+      lastDate: "",
+      lastCreatedAt: record.createdAt,
+      entries: [],
+    });
+  }
   for (const entry of entries) {
     let person = map.get(entry.personKey);
     if (!person) {

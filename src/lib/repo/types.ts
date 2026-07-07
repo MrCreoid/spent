@@ -1,4 +1,9 @@
-import type { Expense, LedgerEntry, LedgerRecord } from "@/lib/types";
+import type {
+  Expense,
+  LedgerEntry,
+  LedgerRecord,
+  PersonRecord,
+} from "@/lib/types";
 
 export type Unsubscribe = () => void;
 
@@ -13,6 +18,7 @@ export type Unsubscribe = () => void;
 export interface DataRepo {
   subscribeExpenses(cb: (expenses: Expense[]) => void): Unsubscribe;
   subscribeLedger(cb: (rows: LedgerRecord[]) => void): Unsubscribe;
+  subscribePeople(cb: (people: PersonRecord[]) => void): Unsubscribe;
 
   putExpense(expense: Expense): Promise<void>;
   deleteExpense(id: string): Promise<void>;
@@ -22,8 +28,15 @@ export interface DataRepo {
   /** Delete a person's whole ledger */
   deleteEntries(ids: string[]): Promise<void>;
 
+  putPerson(person: PersonRecord): Promise<void>;
+  deletePersonRecord(id: string): Promise<void>;
+
   /** Bulk write used by import and migrations */
-  bulkPut(expenses: Expense[], entries: LedgerEntry[]): Promise<void>;
+  bulkPut(
+    expenses: Expense[],
+    entries: LedgerEntry[],
+    people?: PersonRecord[]
+  ): Promise<void>;
   /** Danger zone: wipe everything in this store */
   clearAll(): Promise<void>;
 }

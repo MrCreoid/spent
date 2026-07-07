@@ -9,7 +9,12 @@ import {
   type CollectionReference,
   type Firestore,
 } from "firebase/firestore";
-import type { Expense, LedgerEntry, LedgerRecord } from "@/lib/types";
+import type {
+  Expense,
+  LedgerEntry,
+  LedgerRecord,
+  PersonRecord,
+} from "@/lib/types";
 import type { DataRepo, Unsubscribe } from "./types";
 
 /** Strip undefined values — Firestore rejects them */
@@ -24,26 +29,35 @@ const BATCH_LIMIT = 450; // Firestore caps batches at 500 writes
 export class CloudRepo implements DataRepo {
   private expensesCol: CollectionReference;
   private ledgerCol: CollectionReference;
+  private peopleCol: CollectionReference;
 
   constructor(private db: Firestore, uid: string) {
     this.expensesCol = collection(db, "users", uid, "expenses");
     this.ledgerCol = collection(db, "users", uid, "debts");
+    this.peopleCol = collection(db, "users", uid, "people");
+  }
+
+  private subscribeCol<T>(
+    col: CollectionReference,
+    cb: (rows: T[]) => void
+  ): Unsubscribe {
+    return onSnapshot(
+      col,
+      (snap) => cb(snap.docs.map((d) => d.data() as T)),
+      () => cb([])
+    );
   }
 
   subscribeExpenses(cb: (expenses: Expense[]) => void): Unsubscribe {
-    return onSnapshot(
-      this.expensesCol,
-      (snap) => cb(snap.docs.map((d) => d.data() as Expense)),
-      () => cb([])
-    );
+    return this.subscribeCol(this.expensesCol, cb);
   }
 
   subscribeLedger(cb: (rows: LedgerRecord[]) => void): Unsubscribe {
-    return onSnapshot(
-      this.ledgerCol,
-      (snap) => cb(snap.docs.map((d) => d.data() as LedgerRecord)),
-      () => cb([])
-    );
+    return this.subscribeCol(this.ledgerCol, cb);
+  }
+
+  subscribePeople(cb: (people: PersonRecord[]) => void): Unsubscribe {
+    return this.subscribeCol(this.peopleCol, cb);
   }
 
   async putExpense(expense: Expense) {
@@ -72,10 +86,23 @@ export class CloudRepo implements DataRepo {
     }
   }
 
-  async bulkPut(expenses: Expense[], entries: LedgerEntry[]) {
+  async putPerson(person: PersonRecord) {
+    await setDoc(doc(this.peopleCol, person.id), clean(person));
+  }
+
+  async deletePersonRecord(id: string) {
+    await deleteDoc(doc(this.peopleCol, id));
+  }
+
+  async bulkPut(
+    expenses: Expense[],
+    entries: LedgerEntry[],
+    people: PersonRecord[] = []
+  ) {
     const items = [
       ...expenses.map((e) => ({ col: this.expensesCol, data: clean(e), id: e.id })),
       ...entries.map((d) => ({ col: this.ledgerCol, data: clean(d), id: d.id })),
+      ...people.map((p) => ({ col: this.peopleCol, data: clean(p), id: p.id })),
     ];
     for (let i = 0; i < items.length; i += BATCH_LIMIT) {
       const batch = writeBatch(this.db);
@@ -87,7 +114,7 @@ export class CloudRepo implements DataRepo {
   }
 
   async clearAll() {
-    for (const col of [this.expensesCol, this.ledgerCol]) {
+    for (const col of [this.expensesCol, this.ledgerCol, this.peopleCol]) {
       const snap = await getDocs(col);
       for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
         const batch = writeBatch(this.db);

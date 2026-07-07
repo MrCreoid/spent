@@ -53,7 +53,7 @@ export function ExpenseList({ expenses }: { expenses: Expense[] }) {
               {formatMoney(group.total, currency)}
             </span>
           </div>
-          <div className="overflow-hidden rounded-card bg-card">
+          <div className="overflow-hidden card-surface">
             <AnimatePresence initial={false}>
               {group.items.map((expense, i) => (
                 <motion.div

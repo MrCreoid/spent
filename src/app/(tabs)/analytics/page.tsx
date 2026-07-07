@@ -37,7 +37,7 @@ function Card({
   children: ReactNode;
 }) {
   return (
-    <section className={`rounded-card bg-card p-4 lg:p-5 ${className}`}>
+    <section className={`card-surface p-4 lg:p-5 ${className}`}>
       {title && (
         <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-ink-2">
           {title}
@@ -50,7 +50,7 @@ function Card({
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-card bg-card px-4 py-3.5">
+    <div className="card-surface px-4 py-3.5">
       <p className="text-[12px] font-semibold uppercase tracking-wide text-ink-3">
         {label}
       </p>

@@ -9,6 +9,7 @@ import { AnimatedMoney } from "@/components/ui/animated-number";
 import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
+  BoltIcon,
   ChevronLeftIcon,
   HandshakeIcon,
   PlusIcon,
@@ -62,7 +63,7 @@ export function LedgerView({ person, onBack }: LedgerViewProps) {
 
       {/* Balance hero */}
       <div className="mt-5 flex flex-col items-center text-center">
-        <PersonAvatar name={person.name} size={64} />
+        <PersonAvatar name={person.name} size={72} color={person.color} />
         <h1 className="mt-3 text-[22px] font-bold tracking-tight text-ink">
           {person.name}
         </h1>
@@ -84,13 +85,27 @@ export function LedgerView({ person, onBack }: LedgerViewProps) {
           {person.entryCount} {person.entryCount === 1 ? "entry" : "entries"}
         </p>
 
-        <div className="mt-5 flex gap-2.5">
+        <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+          {!settled && (
+            <Pressable
+              onClick={() => {
+                haptic();
+                openSheet({ kind: "quickAdjust", personKey: person.key });
+              }}
+              className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-[14px] font-semibold text-white"
+            >
+              <BoltIcon size={16} />
+              Quick adjust
+            </Pressable>
+          )}
           <Pressable
             onClick={() => {
               haptic();
               openSheet({ kind: "entry", person: person.name });
             }}
-            className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-[14px] font-semibold text-white"
+            className={`flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[14px] font-semibold ${
+              settled ? "bg-accent text-white" : "bg-card-2 text-ink"
+            }`}
           >
             <PlusIcon size={16} strokeWidth={2.2} />
             Add entry
@@ -118,7 +133,13 @@ export function LedgerView({ person, onBack }: LedgerViewProps) {
           </h2>
           <span className="text-[12px] text-ink-3">Balance after each entry</span>
         </div>
-        <div className="overflow-hidden rounded-card bg-card">
+        <div className="overflow-hidden card-surface">
+          {timeline.length === 0 && (
+            <p className="px-4 py-8 text-center text-[14px] text-ink-2">
+              No entries yet. Add the first one and the running balance
+              takes care of itself.
+            </p>
+          )}
           <AnimatePresence initial={false}>
             {timeline.map(({ entry, running }, i) => {
               const settlement = isSettlement(entry.kind);

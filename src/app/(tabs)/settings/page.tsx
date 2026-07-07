@@ -27,7 +27,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
       <h2 className="mb-2 px-2 text-[13px] font-semibold uppercase tracking-wide text-ink-2">
         {title}
       </h2>
-      <div className="overflow-hidden rounded-card bg-card">{children}</div>
+      <div className="overflow-hidden card-surface">{children}</div>
     </section>
   );
 }

@@ -1,10 +1,16 @@
 import Dexie, { liveQuery, type Table } from "dexie";
-import type { Expense, LedgerEntry, LedgerRecord } from "@/lib/types";
+import type {
+  Expense,
+  LedgerEntry,
+  LedgerRecord,
+  PersonRecord,
+} from "@/lib/types";
 import type { DataRepo, Unsubscribe } from "./types";
 
 class SpentDB extends Dexie {
   expenses!: Table<Expense, string>;
   debts!: Table<LedgerRecord, string>;
+  people!: Table<PersonRecord, string>;
 
   constructor() {
     super("spent");
@@ -17,6 +23,12 @@ class SpentDB extends Dexie {
     this.version(2).stores({
       expenses: "id, date, category, createdAt",
       debts: "id, personKey, date, createdAt",
+    });
+    // v3: declared people (created before their first transaction)
+    this.version(3).stores({
+      expenses: "id, date, category, createdAt",
+      debts: "id, personKey, date, createdAt",
+      people: "id, createdAt",
     });
   }
 }
@@ -31,20 +43,24 @@ export function getLocalDB(): SpentDB {
 export class LocalRepo implements DataRepo {
   private db = getLocalDB();
 
-  subscribeExpenses(cb: (expenses: Expense[]) => void): Unsubscribe {
-    const sub = liveQuery(() => this.db.expenses.toArray()).subscribe({
-      next: cb,
-      error: () => cb([]),
-    });
+  private subscribe<T>(
+    query: () => Promise<T[]>,
+    cb: (rows: T[]) => void
+  ): Unsubscribe {
+    const sub = liveQuery(query).subscribe({ next: cb, error: () => cb([]) });
     return () => sub.unsubscribe();
   }
 
+  subscribeExpenses(cb: (expenses: Expense[]) => void): Unsubscribe {
+    return this.subscribe(() => this.db.expenses.toArray(), cb);
+  }
+
   subscribeLedger(cb: (rows: LedgerRecord[]) => void): Unsubscribe {
-    const sub = liveQuery(() => this.db.debts.toArray()).subscribe({
-      next: cb,
-      error: () => cb([]),
-    });
-    return () => sub.unsubscribe();
+    return this.subscribe(() => this.db.debts.toArray(), cb);
+  }
+
+  subscribePeople(cb: (people: PersonRecord[]) => void): Unsubscribe {
+    return this.subscribe(() => this.db.people.toArray(), cb);
   }
 
   async putExpense(expense: Expense) {
@@ -67,26 +83,57 @@ export class LocalRepo implements DataRepo {
     await this.db.debts.bulkDelete(ids);
   }
 
-  async bulkPut(expenses: Expense[], entries: LedgerEntry[]) {
-    await this.db.transaction("rw", this.db.expenses, this.db.debts, async () => {
-      if (expenses.length) await this.db.expenses.bulkPut(expenses);
-      if (entries.length) await this.db.debts.bulkPut(entries);
-    });
+  async putPerson(person: PersonRecord) {
+    await this.db.people.put(person);
+  }
+
+  async deletePersonRecord(id: string) {
+    await this.db.people.delete(id);
+  }
+
+  async bulkPut(
+    expenses: Expense[],
+    entries: LedgerEntry[],
+    people: PersonRecord[] = []
+  ) {
+    await this.db.transaction(
+      "rw",
+      this.db.expenses,
+      this.db.debts,
+      this.db.people,
+      async () => {
+        if (expenses.length) await this.db.expenses.bulkPut(expenses);
+        if (entries.length) await this.db.debts.bulkPut(entries);
+        if (people.length) await this.db.people.bulkPut(people);
+      }
+    );
   }
 
   async clearAll() {
-    await this.db.transaction("rw", this.db.expenses, this.db.debts, async () => {
-      await this.db.expenses.clear();
-      await this.db.debts.clear();
-    });
+    await this.db.transaction(
+      "rw",
+      this.db.expenses,
+      this.db.debts,
+      this.db.people,
+      async () => {
+        await this.db.expenses.clear();
+        await this.db.debts.clear();
+        await this.db.people.clear();
+      }
+    );
   }
 
   /** Snapshot used for migration to the cloud after first sign-in */
-  async snapshot(): Promise<{ expenses: Expense[]; ledger: LedgerRecord[] }> {
-    const [expenses, ledger] = await Promise.all([
+  async snapshot(): Promise<{
+    expenses: Expense[];
+    ledger: LedgerRecord[];
+    people: PersonRecord[];
+  }> {
+    const [expenses, ledger, people] = await Promise.all([
       this.db.expenses.toArray(),
       this.db.debts.toArray(),
+      this.db.people.toArray(),
     ]);
-    return { expenses, ledger };
+    return { expenses, ledger, people };
   }
 }

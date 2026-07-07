@@ -52,6 +52,21 @@ export interface LedgerEntry {
   updatedAt: number;
 }
 
+/**
+ * A declared person. People are also derived from ledger entries;
+ * a record exists so someone can be created before any transaction
+ * and can carry a chosen avatar color.
+ */
+export interface PersonRecord {
+  /** personKey — normalized name, doubles as the id */
+  id: string;
+  name: string;
+  /** Index into the avatar palette; undefined = hashed from name */
+  color?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /** Pre-ledger schema (v1) — still understood by migration and import */
 export interface LegacyDebt {
   id: string;

@@ -22,8 +22,10 @@ interface ExpenseSheetProps {
   onClose: () => void;
 }
 
+const COMMON_AMOUNTS = [50, 100, 200, 500];
+
 export function ExpenseSheet({ open, initial, onClose }: ExpenseSheetProps) {
-  const { addExpense, updateExpense } = useData();
+  const { addExpense, updateExpense, expenses } = useData();
   const { currency, lastCategory, setLastCategory } = useSettings();
   const dark = useDarkMode();
 
@@ -58,6 +60,27 @@ export function ExpenseSheet({ open, initial, onClose }: ExpenseSheetProps) {
     const n = parseFloat(amountStr);
     return Number.isFinite(n) ? n : 0;
   }, [amountStr]);
+
+  // Recent amounts first, topped up with common ones — max 5 chips
+  const quickAmounts = useMemo(() => {
+    const seen = new Set<number>();
+    const chips: number[] = [];
+    for (const e of expenses) {
+      if (!seen.has(e.amount)) {
+        seen.add(e.amount);
+        chips.push(e.amount);
+        if (chips.length === 3) break;
+      }
+    }
+    for (const a of COMMON_AMOUNTS) {
+      if (chips.length >= 5) break;
+      if (!seen.has(a)) {
+        seen.add(a);
+        chips.push(a);
+      }
+    }
+    return chips;
+  }, [expenses]);
 
   const symbol = currencySymbol(currency);
   const today = todayISO();
@@ -231,8 +254,31 @@ export function ExpenseSheet({ open, initial, onClose }: ExpenseSheetProps) {
           />
         </div>
 
+        {/* Quick amounts */}
+        {quickAmounts.length > 0 && (
+          <div className="no-scrollbar mt-3 flex gap-1.5 overflow-x-auto">
+            {quickAmounts.map((a) => (
+              <Pressable
+                key={a}
+                onClick={() => {
+                  haptic(4);
+                  setAmountStr(String(a));
+                }}
+                className={`tnum shrink-0 rounded-full px-3.5 py-[7px] text-[13px] font-semibold transition-colors duration-150 ${
+                  amountStr === String(a)
+                    ? "bg-accent-soft text-accent"
+                    : "bg-card-2 text-ink-2"
+                }`}
+              >
+                {currencySymbol(currency)}
+                {a}
+              </Pressable>
+            ))}
+          </div>
+        )}
+
         {/* Keypad */}
-        <div className="mt-3">
+        <div className="mt-2">
           <AmountPad value={amountStr} onChange={setAmountStr} />
         </div>
 
