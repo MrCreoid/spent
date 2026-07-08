@@ -12,10 +12,13 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
+/** Built-in category id or the id of a user-created category */
+export type CategoryId = string;
+
 export interface Expense {
   id: string;
   amount: number;
-  category: Category;
+  category: CategoryId;
   /** Local calendar date, yyyy-MM-dd */
   date: string;
   /** Local time, HH:mm — captured automatically */
@@ -67,6 +70,36 @@ export interface PersonRecord {
   updatedAt: number;
 }
 
+/** A user-created expense category */
+export interface CustomCategory {
+  /** slug of the label, e.g. "pet-care" */
+  id: string;
+  label: string;
+  /** Index into the shared color palette */
+  color: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * A monthly recurring "autopay" expense (rent, subscriptions…).
+ * Applied automatically on `dayOfMonth`; missed months are backfilled
+ * when the app next opens. Generated expenses use deterministic ids
+ * (`rec-{id}-{yyyy-MM}`) so multiple devices never duplicate them.
+ */
+export interface RecurringExpense {
+  id: string;
+  amount: number;
+  category: CategoryId;
+  note?: string;
+  /** 1–31; clamped to the month's last day */
+  dayOfMonth: number;
+  /** yyyy-MM of the last month already applied */
+  lastAppliedMonth?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /** Pre-ledger schema (v1) — still understood by migration and import */
 export interface LegacyDebt {
   id: string;
@@ -89,5 +122,5 @@ export type Theme = "system" | "light" | "dark";
 export interface Settings {
   theme: Theme;
   currency: string;
-  lastCategory: Category;
+  lastCategory: CategoryId;
 }

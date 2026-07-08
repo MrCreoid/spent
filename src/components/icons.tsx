@@ -184,6 +184,21 @@ export const ArrowDownLeftIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const TagIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3.5 12.2V5A1.5 1.5 0 0 1 5 3.5h7.2a2 2 0 0 1 1.4.6l6.9 6.9a2 2 0 0 1 0 2.8l-5.7 5.7a2 2 0 0 1-2.8 0l-6.9-6.9a2 2 0 0 1-.6-1.4Z" />
+    <path d="M8 8h.2" strokeWidth={2.4} />
+  </Icon>
+);
+
+export const RepeatIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M17 2.5 20.5 6 17 9.5" />
+    <path d="M3.5 11V9.5A3.5 3.5 0 0 1 7 6h13.5M7 21.5 3.5 18 7 14.5" />
+    <path d="M20.5 13v1.5A3.5 3.5 0 0 1 17 18H3.5" />
+  </Icon>
+);
+
 export const UserPlusIcon = (p: IconProps) => (
   <Icon {...p}>
     <circle cx={10} cy={8} r={3.5} />

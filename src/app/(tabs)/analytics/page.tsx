@@ -20,7 +20,7 @@ import {
   weekSeries,
   yearTotal,
 } from "@/lib/analytics";
-import { CATEGORY_META } from "@/lib/categories";
+import { getCategoryMeta } from "@/lib/categories";
 import { formatMoney } from "@/lib/currency";
 import { monthLabel } from "@/lib/dates";
 import { useData } from "@/lib/data-context";
@@ -63,8 +63,9 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 }
 
 export default function AnalyticsPage() {
-  const { expenses, ready } = useData();
+  const { expenses, ready, customCategories } = useData();
   const currency = useSettings((s) => s.currency);
+  const catLabel = (id: string) => getCategoryMeta(id, customCategories).label;
 
   const now = new Date();
   const [mode, setMode] = useState<"month" | "year">("month");
@@ -185,7 +186,7 @@ export default function AnalyticsPage() {
                 sub={
                   monthStats.largest
                     ? monthStats.largest.note ||
-                      CATEGORY_META[monthStats.largest.category].label
+                      catLabel(monthStats.largest.category)
                     : undefined
                 }
               />
@@ -193,7 +194,7 @@ export default function AnalyticsPage() {
                 label="Top category"
                 value={
                   monthStats.topCategory
-                    ? CATEGORY_META[monthStats.topCategory.category].label
+                    ? catLabel(monthStats.topCategory.category)
                     : "—"
                 }
                 sub={
@@ -228,7 +229,7 @@ export default function AnalyticsPage() {
                 sub={
                   yearStats.largest
                     ? yearStats.largest.note ||
-                      CATEGORY_META[yearStats.largest.category].label
+                      catLabel(yearStats.largest.category)
                     : undefined
                 }
               />

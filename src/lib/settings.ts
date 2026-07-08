@@ -2,12 +2,12 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Category, Settings, Theme } from "./types";
+import type { CategoryId, Settings, Theme } from "./types";
 
 interface SettingsStore extends Settings {
   setTheme: (theme: Theme) => void;
   setCurrency: (currency: string) => void;
-  setLastCategory: (category: Category) => void;
+  setLastCategory: (category: CategoryId) => void;
 }
 
 export const useSettings = create<SettingsStore>()(

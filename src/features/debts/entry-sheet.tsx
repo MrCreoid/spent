@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Sheet } from "@/components/ui/sheet";
 import { Pressable } from "@/components/ui/pressable";
 import { Segmented } from "@/components/ui/segmented";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
+import { TrashIcon } from "@/components/icons";
+import { formatMoney } from "@/lib/currency";
 import { currencySymbol } from "@/lib/currency";
 import { todayISO } from "@/lib/dates";
 import { haptic } from "@/lib/haptics";
@@ -52,8 +55,9 @@ function Field({
 }
 
 export function EntrySheet({ open, initial, person, onClose }: EntrySheetProps) {
-  const { people, addEntry, updateEntry } = useData();
+  const { people, addEntry, updateEntry, deleteEntry } = useData();
   const currency = useSettings((s) => s.currency);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Existing people for the name autocomplete
   const peopleNames = useMemo(() => people.map((p) => p.name), [people]);
@@ -219,7 +223,32 @@ export function EntrySheet({ open, initial, person, onClose }: EntrySheetProps) 
         >
           {isSubmitting ? "Saving…" : initial ? "Save changes" : "Add entry"}
         </Pressable>
+
+        {initial && (
+          <Pressable
+            onClick={() => setConfirmDelete(true)}
+            className="flex h-[46px] w-full items-center justify-center gap-2 rounded-2xl bg-negative-soft text-[15px] font-semibold text-negative"
+          >
+            <TrashIcon size={16} />
+            Delete entry
+          </Pressable>
+        )}
       </form>
+
+      {initial && (
+        <ConfirmSheet
+          open={confirmDelete}
+          title="Delete entry?"
+          message={`The ${formatMoney(initial.amount, currency)} entry with ${initial.person} will be removed and the balance recalculated.`}
+          confirmLabel="Delete entry"
+          onConfirm={() => {
+            setConfirmDelete(false);
+            void deleteEntry(initial.id);
+            onClose();
+          }}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
     </Sheet>
   );
 }

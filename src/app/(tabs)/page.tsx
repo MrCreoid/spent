@@ -18,7 +18,7 @@ import {
 } from "@/components/icons";
 import { ExpenseList } from "@/features/expenses/expense-list";
 import { analyzeMonth, todayTotal, totalsForRange } from "@/lib/analytics";
-import { CATEGORY_META } from "@/lib/categories";
+import { getCategoryMeta } from "@/lib/categories";
 import { formatMoney } from "@/lib/currency";
 import { addDays, daysInMonth, todayISO } from "@/lib/dates";
 import { buildInsights, loggingStreak } from "@/lib/insights";
@@ -50,9 +50,10 @@ function SnapshotCard({
 }
 
 export default function ExpensesPage() {
-  const { expenses, people, ready } = useData();
+  const { expenses, people, ready, customCategories } = useData();
   const currency = useSettings((s) => s.currency);
   const openSheet = useUI((s) => s.openSheet);
+  const catLabel = (id: string) => getCategoryMeta(id, customCategories).label;
 
   const now = new Date();
   const today = todayISO();
@@ -80,7 +81,7 @@ export default function ExpensesPage() {
   }, [expenses]);
   const streak = useMemo(() => loggingStreak(expenses), [expenses]);
   const insight = useMemo(() => {
-    const all = buildInsights(expenses, currency);
+    const all = buildInsights(expenses, currency, customCategories);
     if (all.length === 0) return null;
     const dayOfYear = Math.floor(
       (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86_400_000
@@ -210,7 +211,7 @@ export default function ExpensesPage() {
               label="Top category"
               value={
                 month.topCategory
-                  ? CATEGORY_META[month.topCategory.category].label
+                  ? catLabel(month.topCategory.category)
                   : "—"
               }
               sub={
@@ -305,7 +306,7 @@ export default function ExpensesPage() {
                   <li key={row.category} className="flex items-center gap-2.5">
                     <CategoryBadge category={row.category} size={28} />
                     <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-ink">
-                      {CATEGORY_META[row.category].label}
+                      {catLabel(row.category)}
                     </span>
                     <span className="tnum text-[13.5px] font-semibold text-ink">
                       {formatMoney(row.total, currency)}

@@ -12,14 +12,28 @@ import {
   CloudOffIcon,
   DownloadIcon,
   LogoutIcon,
+  PlusIcon,
+  RepeatIcon,
+  TrashIcon,
   UploadIcon,
 } from "@/components/icons";
-import { CURRENCIES, currencySymbol } from "@/lib/currency";
+import { CategoryBadge } from "@/components/ui/category-badge";
+import { RecurringSheet } from "@/features/expenses/recurring-sheet";
+import { CURRENCIES, currencySymbol, formatMoney } from "@/lib/currency";
+import { getCategoryMeta } from "@/lib/categories";
 import { useAuth } from "@/lib/auth-context";
 import { useData } from "@/lib/data-context";
 import { useSettings } from "@/lib/settings";
 import { haptic } from "@/lib/haptics";
 import type { Theme } from "@/lib/types";
+
+function ordinal(n: number): string {
+  const suffix =
+    n % 100 >= 11 && n % 100 <= 13
+      ? "th"
+      : ["th", "st", "nd", "rd"][Math.min(n % 10, 4)] ?? "th";
+  return `${n}${suffix}`;
+}
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -77,11 +91,19 @@ const Divider = () => <div className="ml-4 h-px bg-line" />;
 export default function SettingsPage() {
   const { theme, setTheme, currency, setCurrency } = useSettings();
   const { user, syncAvailable, signOut } = useAuth();
-  const { exportData, importData, resetAll } = useData();
+  const {
+    exportData,
+    importData,
+    resetAll,
+    recurring,
+    deleteRecurring,
+    customCategories,
+  } = useData();
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [recurringOpen, setRecurringOpen] = useState(false);
 
   const flash = (text: string) => {
     setMessage(text);
@@ -199,6 +221,53 @@ export default function SettingsPage() {
           </div>
         </Group>
 
+        <Group title="Autopay">
+          {recurring.map((r, i) => (
+            <div key={r.id}>
+              {i > 0 && <Divider />}
+              <div className="flex items-center gap-3 px-4 py-3">
+                <CategoryBadge category={r.category} size={36} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-medium text-ink">
+                    {r.note || getCategoryMeta(r.category, customCategories).label}
+                  </p>
+                  <p className="mt-0.5 text-[13px] text-ink-3">
+                    <span className="tnum">{formatMoney(r.amount, currency)}</span>
+                    {" · "}
+                    {ordinal(r.dayOfMonth)} of every month
+                  </p>
+                </div>
+                <Pressable
+                  aria-label={`Stop ${r.note || "this"} autopay`}
+                  onClick={() => {
+                    haptic(8);
+                    void deleteRecurring(r.id);
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-card-2 text-ink-3 transition-colors duration-150 hover:text-negative"
+                >
+                  <TrashIcon size={15} />
+                </Pressable>
+              </div>
+            </div>
+          ))}
+          {recurring.length > 0 && <Divider />}
+          <Row
+            label="Add autopay"
+            sub={
+              recurring.length === 0
+                ? "Rent, subscriptions… added automatically every month."
+                : undefined
+            }
+            control={
+              <span className="flex items-center gap-1.5 text-ink-3">
+                <RepeatIcon size={16} />
+                <PlusIcon size={16} />
+              </span>
+            }
+            onClick={() => setRecurringOpen(true)}
+          />
+        </Group>
+
         <Group title="Data">
           <Row
             label="Export backup"
@@ -239,6 +308,8 @@ export default function SettingsPage() {
           e.target.value = "";
         }}
       />
+
+      <RecurringSheet open={recurringOpen} onClose={() => setRecurringOpen(false)} />
 
       <ConfirmSheet
         open={confirmReset}

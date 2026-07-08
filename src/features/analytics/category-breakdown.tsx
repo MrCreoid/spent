@@ -3,8 +3,9 @@
 import { motion } from "framer-motion";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import { useDarkMode } from "@/components/theme";
-import { CATEGORY_META } from "@/lib/categories";
+import { getCategoryMeta } from "@/lib/categories";
 import { formatMoney } from "@/lib/currency";
+import { useData } from "@/lib/data-context";
 import type { CategoryTotal } from "@/lib/analytics";
 
 export function CategoryBreakdown({
@@ -15,6 +16,7 @@ export function CategoryBreakdown({
   currency: string;
 }) {
   const dark = useDarkMode();
+  const { customCategories } = useData();
   if (data.length === 0) {
     return (
       <p className="py-6 text-center text-[14px] text-ink-3">
@@ -26,7 +28,7 @@ export function CategoryBreakdown({
   return (
     <ul className="flex flex-col gap-4">
       {data.map((row, i) => {
-        const meta = CATEGORY_META[row.category];
+        const meta = getCategoryMeta(row.category, customCategories);
         return (
           <li key={row.category} className="flex items-center gap-3">
             <CategoryBadge category={row.category} size={36} />

@@ -10,12 +10,14 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import type {
+  CustomCategory,
   Expense,
   LedgerEntry,
   LedgerRecord,
   PersonRecord,
+  RecurringExpense,
 } from "@/lib/types";
-import type { DataRepo, Unsubscribe } from "./types";
+import type { BulkData, DataRepo, Unsubscribe } from "./types";
 
 /** Strip undefined values — Firestore rejects them */
 function clean<T extends object>(value: T): T {
@@ -30,11 +32,15 @@ export class CloudRepo implements DataRepo {
   private expensesCol: CollectionReference;
   private ledgerCol: CollectionReference;
   private peopleCol: CollectionReference;
+  private categoriesCol: CollectionReference;
+  private recurringCol: CollectionReference;
 
   constructor(private db: Firestore, uid: string) {
     this.expensesCol = collection(db, "users", uid, "expenses");
     this.ledgerCol = collection(db, "users", uid, "debts");
     this.peopleCol = collection(db, "users", uid, "people");
+    this.categoriesCol = collection(db, "users", uid, "categories");
+    this.recurringCol = collection(db, "users", uid, "recurring");
   }
 
   private subscribeCol<T>(
@@ -58,6 +64,14 @@ export class CloudRepo implements DataRepo {
 
   subscribePeople(cb: (people: PersonRecord[]) => void): Unsubscribe {
     return this.subscribeCol(this.peopleCol, cb);
+  }
+
+  subscribeCategories(cb: (categories: CustomCategory[]) => void): Unsubscribe {
+    return this.subscribeCol(this.categoriesCol, cb);
+  }
+
+  subscribeRecurring(cb: (recurring: RecurringExpense[]) => void): Unsubscribe {
+    return this.subscribeCol(this.recurringCol, cb);
   }
 
   async putExpense(expense: Expense) {
@@ -94,15 +108,25 @@ export class CloudRepo implements DataRepo {
     await deleteDoc(doc(this.peopleCol, id));
   }
 
-  async bulkPut(
-    expenses: Expense[],
-    entries: LedgerEntry[],
-    people: PersonRecord[] = []
-  ) {
+  async putCategory(category: CustomCategory) {
+    await setDoc(doc(this.categoriesCol, category.id), clean(category));
+  }
+
+  async putRecurring(recurring: RecurringExpense) {
+    await setDoc(doc(this.recurringCol, recurring.id), clean(recurring));
+  }
+
+  async deleteRecurring(id: string) {
+    await deleteDoc(doc(this.recurringCol, id));
+  }
+
+  async bulkPut(data: BulkData) {
     const items = [
-      ...expenses.map((e) => ({ col: this.expensesCol, data: clean(e), id: e.id })),
-      ...entries.map((d) => ({ col: this.ledgerCol, data: clean(d), id: d.id })),
-      ...people.map((p) => ({ col: this.peopleCol, data: clean(p), id: p.id })),
+      ...(data.expenses ?? []).map((e) => ({ col: this.expensesCol, data: clean(e), id: e.id })),
+      ...(data.entries ?? []).map((d) => ({ col: this.ledgerCol, data: clean(d), id: d.id })),
+      ...(data.people ?? []).map((p) => ({ col: this.peopleCol, data: clean(p), id: p.id })),
+      ...(data.categories ?? []).map((c) => ({ col: this.categoriesCol, data: clean(c), id: c.id })),
+      ...(data.recurring ?? []).map((r) => ({ col: this.recurringCol, data: clean(r), id: r.id })),
     ];
     for (let i = 0; i < items.length; i += BATCH_LIMIT) {
       const batch = writeBatch(this.db);
@@ -114,7 +138,14 @@ export class CloudRepo implements DataRepo {
   }
 
   async clearAll() {
-    for (const col of [this.expensesCol, this.ledgerCol, this.peopleCol]) {
+    const cols = [
+      this.expensesCol,
+      this.ledgerCol,
+      this.peopleCol,
+      this.categoriesCol,
+      this.recurringCol,
+    ];
+    for (const col of cols) {
       const snap = await getDocs(col);
       for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
         const batch = writeBatch(this.db);

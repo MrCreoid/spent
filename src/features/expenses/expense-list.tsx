@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { SwipeRow } from "@/components/ui/swipe-row";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
-import { CATEGORY_META } from "@/lib/categories";
+import { getCategoryMeta } from "@/lib/categories";
 import { formatMoney } from "@/lib/currency";
 import { formatDayHeading, formatTime } from "@/lib/dates";
 import { useData } from "@/lib/data-context";
@@ -34,12 +34,13 @@ function groupByDay(expenses: Expense[]): DayGroup[] {
 }
 
 export function ExpenseList({ expenses }: { expenses: Expense[] }) {
-  const { deleteExpense } = useData();
+  const { deleteExpense, customCategories } = useData();
   const currency = useSettings((s) => s.currency);
   const openSheet = useUI((s) => s.openSheet);
   const [pendingDelete, setPendingDelete] = useState<Expense | null>(null);
 
   const groups = useMemo(() => groupByDay(expenses), [expenses]);
+  const catLabel = (id: string) => getCategoryMeta(id, customCategories).label;
 
   return (
     <div className="flex flex-col gap-5">
@@ -84,11 +85,11 @@ export function ExpenseList({ expenses }: { expenses: Expense[] }) {
                       <CategoryBadge category={expense.category} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[15px] font-medium text-ink">
-                          {expense.note || CATEGORY_META[expense.category].label}
+                          {expense.note || catLabel(expense.category)}
                         </p>
                         <p className="mt-0.5 text-[13px] text-ink-3">
                           {expense.note
-                            ? `${CATEGORY_META[expense.category].label} · ${formatTime(expense.time)}`
+                            ? `${catLabel(expense.category)} · ${formatTime(expense.time)}`
                             : formatTime(expense.time)}
                         </p>
                       </div>
@@ -109,7 +110,7 @@ export function ExpenseList({ expenses }: { expenses: Expense[] }) {
         title="Delete expense?"
         message={
           pendingDelete
-            ? `${formatMoney(pendingDelete.amount, currency)} on ${CATEGORY_META[pendingDelete.category].label.toLowerCase()} will be removed. This can't be undone.`
+            ? `${formatMoney(pendingDelete.amount, currency)} on ${catLabel(pendingDelete.category).toLowerCase()} will be removed. This can't be undone.`
             : ""
         }
         confirmLabel="Delete"

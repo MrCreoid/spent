@@ -5,16 +5,17 @@ import { motion } from "framer-motion";
 import { Sheet } from "@/components/ui/sheet";
 import { AmountPad } from "./amount-pad";
 import { Pressable } from "@/components/ui/pressable";
-import { CATEGORY_ICONS } from "@/components/icons";
-import { CATEGORY_LIST } from "@/lib/categories";
+import { CATEGORY_ICONS, CheckIcon, PlusIcon, TagIcon } from "@/components/icons";
+import { allCategories, isBuiltInCategory } from "@/lib/categories";
 import { currencySymbol } from "@/lib/currency";
 import { nowTime, todayISO, addDays, formatShortDate } from "@/lib/dates";
 import { haptic } from "@/lib/haptics";
+import { COLOR_PAIRS } from "@/lib/palette";
 import { expenseSchema } from "@/lib/schemas";
 import { useSettings } from "@/lib/settings";
 import { useData } from "@/lib/data-context";
 import { useDarkMode } from "@/components/theme";
-import type { Category, Expense } from "@/lib/types";
+import type { CategoryId, Expense } from "@/lib/types";
 
 interface ExpenseSheetProps {
   open: boolean;
@@ -25,22 +26,28 @@ interface ExpenseSheetProps {
 const COMMON_AMOUNTS = [50, 100, 200, 500];
 
 export function ExpenseSheet({ open, initial, onClose }: ExpenseSheetProps) {
-  const { addExpense, updateExpense, expenses } = useData();
+  const { addExpense, updateExpense, expenses, customCategories, addCategory } =
+    useData();
   const { currency, lastCategory, setLastCategory } = useSettings();
   const dark = useDarkMode();
 
   const [amountStr, setAmountStr] = useState("");
-  const [category, setCategory] = useState<Category>(lastCategory);
+  const [category, setCategory] = useState<CategoryId>(lastCategory);
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [newCatOpen, setNewCatOpen] = useState(false);
+  const [newCatLabel, setNewCatLabel] = useState("");
+  const [newCatColor, setNewCatColor] = useState(0);
 
   // Reset form whenever the sheet opens
   useEffect(() => {
     if (!open) return;
     setError(null);
     setSaving(false);
+    setNewCatOpen(false);
+    setNewCatLabel("");
     if (initial) {
       setAmountStr(String(initial.amount));
       setCategory(initial.category);
@@ -171,8 +178,10 @@ export function ExpenseSheet({ open, initial, onClose }: ExpenseSheetProps) {
           role="radiogroup"
           aria-label="Category"
         >
-          {CATEGORY_LIST.map((meta) => {
-            const CategoryIcon = CATEGORY_ICONS[meta.id];
+          {allCategories(customCategories).map((meta) => {
+            const CategoryIcon = isBuiltInCategory(meta.id)
+              ? CATEGORY_ICONS[meta.id]
+              : TagIcon;
             const active = category === meta.id;
             const idx = dark ? 1 : 0;
             return (
@@ -197,7 +206,68 @@ export function ExpenseSheet({ open, initial, onClose }: ExpenseSheetProps) {
               </Pressable>
             );
           })}
+          <Pressable
+            aria-label="Create a new category"
+            pressScale={0.93}
+            onClick={() => {
+              haptic(4);
+              setNewCatOpen((v) => !v);
+            }}
+            className={`flex items-center gap-1 rounded-full py-[7px] pl-2.5 pr-3 text-[13px] font-medium transition-colors duration-150 ${
+              newCatOpen ? "bg-accent-soft text-accent" : "bg-card-2 text-ink-2"
+            }`}
+          >
+            <PlusIcon size={14} strokeWidth={2.2} />
+            New
+          </Pressable>
         </div>
+
+        {/* Inline category creator */}
+        {newCatOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="mt-2 overflow-hidden"
+          >
+            <div className="flex items-center gap-2 rounded-2xl bg-card-2 p-2">
+              <input
+                type="text"
+                value={newCatLabel}
+                onChange={(e) => setNewCatLabel(e.target.value)}
+                placeholder="Category name"
+                maxLength={24}
+                autoFocus
+                className="min-w-0 flex-1 bg-transparent px-2 text-[14px] text-ink placeholder:text-ink-3"
+                aria-label="New category name"
+              />
+              {COLOR_PAIRS.map(([fg, bg], i) => (
+                <button
+                  key={fg}
+                  type="button"
+                  aria-label={`Color ${i + 1}`}
+                  onClick={() => setNewCatColor(i)}
+                  className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full"
+                  style={{ background: bg, color: fg }}
+                >
+                  {newCatColor === i && <CheckIcon size={13} strokeWidth={2.6} />}
+                </button>
+              ))}
+              <Pressable
+                disabled={!newCatLabel.trim()}
+                onClick={async () => {
+                  const id = await addCategory(newCatLabel, newCatColor);
+                  haptic(8);
+                  setCategory(id);
+                  setNewCatOpen(false);
+                  setNewCatLabel("");
+                }}
+                className="shrink-0 rounded-xl bg-accent px-3 py-1.5 text-[13px] font-semibold text-white disabled:opacity-35"
+              >
+                Add
+              </Pressable>
+            </div>
+          </motion.div>
+        )}
 
         {/* Date + note */}
         <div className="mt-4 flex items-center gap-1.5">

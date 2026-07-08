@@ -1,4 +1,4 @@
-import type { Category, Expense } from "./types";
+import type { CategoryId, Expense } from "./types";
 import {
   addDays,
   daysInMonth,
@@ -10,7 +10,7 @@ import {
 } from "./dates";
 
 export interface CategoryTotal {
-  category: Category;
+  category: CategoryId;
   total: number;
   share: number;
   count: number;
@@ -41,7 +41,7 @@ export interface MonthAnalytics {
 
 export function categoryTotals(rows: Expense[]): CategoryTotal[] {
   const total = rows.reduce((s, e) => s + e.amount, 0);
-  const map = new Map<Category, { total: number; count: number }>();
+  const map = new Map<CategoryId, { total: number; count: number }>();
   for (const e of rows) {
     const entry = map.get(e.category) ?? { total: 0, count: 0 };
     entry.total += e.amount;

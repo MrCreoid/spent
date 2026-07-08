@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { CATEGORIES } from "./types";
 
 const isoDate = z
   .string()
@@ -12,11 +11,24 @@ const money = z
 
 export const expenseSchema = z.object({
   amount: money,
-  category: z.enum(CATEGORIES),
+  category: z.string().min(1, "Pick a category"),
   date: isoDate,
   time: z.string().regex(/^\d{2}:\d{2}$/),
   note: z.string().trim().max(140, "Keep notes under 140 characters").optional(),
 });
+
+export const recurringSchema = z.object({
+  amount: money,
+  category: z.string().min(1, "Pick a category"),
+  dayOfMonth: z
+    .number({ invalid_type_error: "Pick a day" })
+    .int("Whole days only")
+    .min(1, "Between 1 and 31")
+    .max(31, "Between 1 and 31"),
+  note: z.string().trim().max(60, "Keep it short").optional(),
+});
+
+export type RecurringFormValues = z.infer<typeof recurringSchema>;
 
 export const entrySchema = z.object({
   person: z

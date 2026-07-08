@@ -1,5 +1,5 @@
-import type { Expense } from "./types";
-import { CATEGORY_META } from "./categories";
+import type { CustomCategory, Expense } from "./types";
+import { getCategoryMeta } from "./categories";
 import { addDays, todayISO, monthPrefix, parseISODate } from "./dates";
 import { categoryTotals, totalsForRange } from "./analytics";
 import { formatMoney } from "./currency";
@@ -23,7 +23,11 @@ export function loggingStreak(expenses: Expense[]): number {
  * Plain-statistics insights, most interesting first. The home screen
  * rotates through them day by day.
  */
-export function buildInsights(expenses: Expense[], currency: string): string[] {
+export function buildInsights(
+  expenses: Expense[],
+  currency: string,
+  customCategories: CustomCategory[] = []
+): string[] {
   const insights: string[] = [];
   const today = todayISO();
   const now = new Date();
@@ -49,7 +53,7 @@ export function buildInsights(expenses: Expense[], currency: string): string[] {
   const byCategory = categoryTotals(monthRows);
   if (byCategory.length > 1 && byCategory[0].share >= 0.3) {
     insights.push(
-      `${CATEGORY_META[byCategory[0].category].label} is ${Math.round(
+      `${getCategoryMeta(byCategory[0].category, customCategories).label} is ${Math.round(
         byCategory[0].share * 100
       )}% of this month's spending.`
     );
@@ -81,7 +85,7 @@ export function buildInsights(expenses: Expense[], currency: string): string[] {
     const before = lastByCategory.get(row.category) ?? 0;
     if (before >= 100 && row.total >= before * 1.3) {
       insights.push(
-        `${CATEGORY_META[row.category].label} spending is up ${Math.round(
+        `${getCategoryMeta(row.category, customCategories).label} spending is up ${Math.round(
           (row.total / before - 1) * 100
         )}% on last month.`
       );

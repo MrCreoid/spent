@@ -1,20 +1,24 @@
 "use client";
 
-import { CATEGORY_ICONS } from "@/components/icons";
-import { CATEGORY_META } from "@/lib/categories";
-import type { Category } from "@/lib/types";
+import { CATEGORY_ICONS, TagIcon } from "@/components/icons";
+import { getCategoryMeta, isBuiltInCategory } from "@/lib/categories";
+import type { CategoryId } from "@/lib/types";
 import { useDarkMode } from "@/components/theme";
+import { useData } from "@/lib/data-context";
 
 interface CategoryBadgeProps {
-  category: Category;
+  category: CategoryId;
   size?: number;
 }
 
-/** Rounded-square tinted category icon, Things 3 style */
+/** Rounded-square tinted category icon; custom categories get the tag icon */
 export function CategoryBadge({ category, size = 40 }: CategoryBadgeProps) {
   const dark = useDarkMode();
-  const meta = CATEGORY_META[category];
-  const IconComponent = CATEGORY_ICONS[category];
+  const { customCategories } = useData();
+  const meta = getCategoryMeta(category, customCategories);
+  const IconComponent = isBuiltInCategory(category)
+    ? CATEGORY_ICONS[category]
+    : TagIcon;
   const idx = dark ? 1 : 0;
   return (
     <span

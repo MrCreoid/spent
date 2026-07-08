@@ -1,12 +1,16 @@
-import type { Category } from "./types";
+import type { Category, CategoryId, CustomCategory } from "./types";
+import { CATEGORIES } from "./types";
+import { pairFor } from "./palette";
 
 export interface CategoryMeta {
-  id: Category;
+  id: CategoryId;
   label: string;
   /** [light, dark] icon colors */
   color: [string, string];
   /** [light, dark] soft background tints */
   tint: [string, string];
+  /** True for user-created categories (rendered with the tag icon) */
+  custom?: boolean;
 }
 
 export const CATEGORY_META: Record<Category, CategoryMeta> = {
@@ -67,3 +71,47 @@ export const CATEGORY_META: Record<Category, CategoryMeta> = {
 };
 
 export const CATEGORY_LIST = Object.values(CATEGORY_META);
+
+export function isBuiltInCategory(id: CategoryId): id is Category {
+  return (CATEGORIES as readonly string[]).includes(id);
+}
+
+/** Slug for a new custom category, e.g. "Pet care" → "pet-care" */
+export function categorySlug(label: string): string {
+  return label.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
+function metaFromCustom(custom: CustomCategory): CategoryMeta {
+  const [fg, bg] = pairFor(custom.color, custom.id);
+  return {
+    id: custom.id,
+    label: custom.label,
+    color: [fg, fg],
+    tint: [bg, bg],
+    custom: true,
+  };
+}
+
+/**
+ * Meta for any category id — built-in, user-created, or unknown
+ * (e.g. a custom category referenced by imported data).
+ */
+export function getCategoryMeta(
+  id: CategoryId,
+  customs: CustomCategory[] = []
+): CategoryMeta {
+  if (isBuiltInCategory(id)) return CATEGORY_META[id];
+  const custom = customs.find((c) => c.id === id);
+  if (custom) return metaFromCustom(custom);
+  return {
+    id,
+    label: id.charAt(0).toUpperCase() + id.slice(1).replace(/-/g, " "),
+    color: CATEGORY_META.misc.color,
+    tint: CATEGORY_META.misc.tint,
+    custom: true,
+  };
+}
+
+export function allCategories(customs: CustomCategory[] = []): CategoryMeta[] {
+  return [...CATEGORY_LIST, ...customs.map(metaFromCustom)];
+}
